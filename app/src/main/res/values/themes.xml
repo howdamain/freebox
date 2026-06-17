@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.MyApplication" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Dark status-bar icons on our light surfaces during the launch frame;
+             enableEdgeToEdge() takes over once Compose is up. -->
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

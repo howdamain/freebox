@@ -1,0 +1,19 @@
+<lint-module
+    format="1"
+    dir="/Users/xayonyurx/Downloads/stitch_local_freebie_radar/app"
+    name=":app"
+    type="APP"
+    maven="My Application:app:unspecified"
+    agpVersion="9.2.1"
+    buildFolder="build"
+    bootClassPath="/Users/xayonyurx/Library/Android/sdk/platforms/android-36.1/android.jar:/Users/xayonyurx/Library/Android/sdk/build-tools/36.0.0/core-lambda-stubs.jar"
+    javaSourceLevel="11"
+    compileTarget="android-36.1"
+    highlightGradualR8Api="false">
+  <lintOptions
+      abortOnError="true"
+      absolutePaths="true"
+      checkReleaseBuilds="true"
+      explainIssues="true"/>
+  <variant name="release"/>
+</lint-module>
