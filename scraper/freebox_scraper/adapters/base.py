@@ -69,14 +69,15 @@ class NormalizedListing:
     price: str = "Free"
     condition: str | None = None
     image_url: str | None = None
+    url: str | None = None          # absolute link to the original source listing
     posted_at: str | None = None    # ISO 8601 timestamptz
     status: str = "available"
 
     def to_db_row(self) -> dict[str, Any]:
         """
         Serialize to a dict that maps directly to the `listings` table columns.
-        Excludes `zip` (internal only). Excludes None values so PostgREST
-        doesn't try to write NULL over existing data unnecessarily.
+        Excludes None values so PostgREST doesn't write NULL over existing data
+        unnecessarily.
         """
         row: dict[str, Any] = {
             "source": self.source,
@@ -92,10 +93,12 @@ class NormalizedListing:
             "description": self.description,
             "category": self.category,
             "city": self.city,
+            "zip": self.zip,
             "latitude": self.latitude,
             "longitude": self.longitude,
             "condition": self.condition,
             "image_url": self.image_url,
+            "url": self.url,
             "posted_at": self.posted_at,
         }
         for k, v in optional.items():
@@ -120,6 +123,12 @@ class SourceAdapter(ABC):
     adapters in a single worker pass.  Browser-free adapters (e.g. Craigslist)
     may ignore it.
     """
+
+    # Override to True for adapters that need the shared Playwright BrowserSession
+    # (e.g. GraphQL response interception). Browser-free httpx adapters leave this
+    # False so the worker can skip launching Chromium entirely when no due target
+    # needs it — keeping CI/hosted runs lightweight.
+    requires_browser: bool = False
 
     @property
     @abstractmethod

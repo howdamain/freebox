@@ -11,6 +11,7 @@ Endpoints used:
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from typing import Any
 
@@ -66,10 +67,62 @@ def upsert_listings(rows: list[dict[str, Any]]) -> int:
     Upsert a batch of normalized listing dicts into the `listings` table.
     Conflict key: (source, source_listing_id) → merge-duplicates.
     Returns the count of rows sent (not necessarily inserted vs updated).
+
+    PostgREST bulk insert requires every object in one POST to have the SAME set
+    of keys (PGRST102 "All object keys must match"). Because to_db_row() omits
+    None-valued optional fields, rows can have differing key sets (e.g. some have
+    image_url, some don't). We group rows by their key set and POST each uniform
+    group separately — this satisfies PGRST102 while preserving the deliberate
+    "don't write NULL over existing data" behaviour of omitting None fields.
     """
     if not rows:
         return 0
 
+    # Stamp last_seen_at on every row so re-crawled listings stay fresh and ones
+    # that fall off their source can be expired (see expire_stale_listings).
+    seen = _now_iso()
+    for row in rows:
+        row["last_seen_at"] = seen
+
+    groups: dict[frozenset[str], list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        groups[frozenset(row.keys())].append(row)
+
+    total = 0
+    for group in groups.values():
+        _post_listings(group)
+        total += len(group)
+    log.info("Upserted %d listing(s) across %d key-group(s).", total, len(groups))
+    return total
+
+
+def expire_stale_listings(days: int) -> int:
+    """
+    Mark 'available' listings not re-seen within `days` as 'expired' so the feed
+    ages out items that have fallen off their source (rotated off / sold / pulled).
+    Returns the number expired. Safe to call every pass.
+    """
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    resp = requests.patch(
+        f"{_BASE}/listings",
+        headers={**_HEADERS, "Prefer": "count=exact,return=minimal"},
+        params={"status": "eq.available", "last_seen_at": f"lt.{cutoff}"},
+        json={"status": "expired"},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    count = 0
+    content_range = resp.headers.get("content-range", "")
+    if "/" in content_range:
+        tail = content_range.rsplit("/", 1)[-1]
+        if tail.isdigit():
+            count = int(tail)
+    log.info("Expired %d stale listing(s) (>%dd since last seen).", count, days)
+    return count
+
+
+def _post_listings(rows: list[dict[str, Any]]) -> None:
+    """POST one uniform-key group of listing rows (upsert on merge-duplicates)."""
     resp = requests.post(
         f"{_BASE}/listings",
         headers={
@@ -82,7 +135,7 @@ def upsert_listings(rows: list[dict[str, Any]]) -> int:
     )
     try:
         resp.raise_for_status()
-    except requests.HTTPError as exc:
+    except requests.HTTPError:
         # Surface the response body for debugging (Postgres constraint violations
         # return a JSON error with the offending detail).
         log.error(
@@ -91,8 +144,6 @@ def upsert_listings(rows: list[dict[str, Any]]) -> int:
             resp.text[:500],
         )
         raise
-    log.info("Upserted %d listing(s).", len(rows))
-    return len(rows)
 
 
 def mark_crawled(zip_code: str, source: str, result_count: int, frequency_tier: str) -> None:

@@ -63,6 +63,18 @@ def dedupe_batch(items: list[NormalizedListing]) -> list[NormalizedListing]:
     total_dropped = 0
 
     for zip_code, group in by_zip.items():
+        # Deterministic order: highest est_profit first, then a stable tiebreak by
+        # source/id. The i<j pairing below drops the higher index on a profit tie,
+        # so this fixed ordering makes the surviving listing independent of the
+        # order items were fetched/accumulated in (see the parallelization audit).
+        group = sorted(
+            group,
+            key=lambda it: (
+                -(it.est_profit or 0),
+                it.source or "",
+                it.source_listing_id or "",
+            ),
+        )
         # Build normalized titles once per item
         norm_titles = [_normalize_title(item.title or "") for item in group]
 

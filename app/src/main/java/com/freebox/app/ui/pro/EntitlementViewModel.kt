@@ -10,9 +10,9 @@ import kotlinx.coroutines.launch
 
 enum class EntitlementState { UNKNOWN, ENTITLED, NOT_ENTITLED }
 
-// Drives the hard-paywall gate. On launch it checks the user's entitlement;
-// the trial CTA currently self-grants via the dev RPC (replaced by Play Billing
-// verification before ship).
+// Drives the hard-paywall gate. On launch it checks the user's entitlement.
+// The trial CTA must trigger Play Billing; entitlements are granted only
+// server-side after purchase verification (no client-side self-grant).
 class EntitlementViewModel : ViewModel() {
     private val _state = MutableStateFlow(EntitlementState.UNKNOWN)
     val state: StateFlow<EntitlementState> = _state.asStateFlow()
@@ -33,7 +33,9 @@ class EntitlementViewModel : ViewModel() {
         viewModelScope.launch {
             _working.value = true
             try {
-                EntitlementRepository.devGrant()
+                // Entitlements are granted only server-side after Play Billing
+                // verification (service_role). Wire the purchase flow here; the
+                // client never self-grants. Until then the CTA just re-checks state.
                 val entitled = EntitlementRepository.isEntitled()
                 _state.value = if (entitled) EntitlementState.ENTITLED else EntitlementState.NOT_ENTITLED
             } catch (_: Exception) {

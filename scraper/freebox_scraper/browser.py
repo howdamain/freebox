@@ -189,6 +189,18 @@ class BrowserSession:
         await ctx.add_init_script(_ANTI_DETECT_SCRIPT)
         return ctx
 
+    async def fetch_html(self, url: str, wait_ms: int = 3500) -> str:
+        """Navigate to `url` in a fresh guest context and return rendered HTML.
+        For HTML-scraped sources (eBay comps, Craigslist fallback) that aren't GraphQL."""
+        ctx = await self._new_context()
+        try:
+            page: Page = await ctx.new_page()
+            await page.goto(url, wait_until="domcontentloaded", timeout=45000)
+            await page.wait_for_timeout(wait_ms)
+            return await page.content()
+        finally:
+            await ctx.close()
+
     async def capture_graphql(
         self,
         url: str,

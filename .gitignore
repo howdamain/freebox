@@ -4,6 +4,7 @@
 /.idea
 .DS_Store
 /build
+**/build/
 /captures
 .externalNativeBuild
 .cxx
@@ -18,3 +19,10 @@ __pycache__/
 keystore.properties
 *.jks
 *.keystore
+
+# Claude Code session data — never publish
+.claude/
+
+# Unrelated projects that happen to sit in this folder — do NOT publish
+/forex_sim/
+/baymaderugs/

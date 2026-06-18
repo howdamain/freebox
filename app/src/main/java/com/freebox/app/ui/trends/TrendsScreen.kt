@@ -59,7 +59,7 @@ fun TrendsScreen() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "TOTAL PROFIT",
+                    text = "TOTAL EST. RESALE",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -84,7 +84,7 @@ fun TrendsScreen() {
                 border = BorderStroke(1.dp, SlateBorderFaint)
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
-                    Text(text = "Profit Trends", style = MaterialTheme.typography.headlineSmall)
+                    Text(text = "Resale Value Trends", style = MaterialTheme.typography.headlineSmall)
 
                     Spacer(modifier = Modifier.height(24.dp))
 

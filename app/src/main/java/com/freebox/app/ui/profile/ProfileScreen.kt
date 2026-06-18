@@ -181,7 +181,7 @@ fun ProfileScreen(onBack: () -> Unit, onUpgradeToPro: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "BOXED VALUE",
+                    text = "EST. RESALE VALUE",
                     style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Bold

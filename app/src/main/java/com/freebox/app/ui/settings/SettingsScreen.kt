@@ -1,6 +1,9 @@
 package com.freebox.app.ui.settings
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -16,12 +19,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.freebox.app.R
+import com.freebox.app.data.AccountRepository
+import com.freebox.app.data.supabase
 import com.freebox.app.ui.theme.FreeboxTheme
 import com.freebox.app.ui.theme.SlateBorderFaint
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.launch
 
 @Composable
@@ -32,8 +41,13 @@ fun SettingsScreen(onLogOut: () -> Unit = {}) {
     var craigslist by rememberSaveable { mutableStateOf(true) }
     var nextdoor by rememberSaveable { mutableStateOf(false) }
     var showLogOutDialog by rememberSaveable { mutableStateOf(false) }
+    var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var isDeletingAccount by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val accountEmail = remember { supabase.auth.currentUserOrNull()?.email ?: "—" }
+    val context = LocalContext.current
+    val privacyUrl = stringResource(R.string.privacy_policy_url)
 
     if (showLogOutDialog) {
         AlertDialog(
@@ -56,6 +70,53 @@ fun SettingsScreen(onLogOut: () -> Unit = {}) {
             dismissButton = {
                 TextButton(onClick = { showLogOutDialog = false }) {
                     Text(text = "Stay")
+                }
+            }
+        )
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isDeletingAccount) showDeleteDialog = false },
+            title = { Text(text = "Delete your account?") },
+            text = {
+                Text(
+                    text = "This permanently removes your account, saved finds, and alerts. This can't be undone."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            isDeletingAccount = true
+                            runCatching { AccountRepository.deleteAccount() }
+                            isDeletingAccount = false
+                            showDeleteDialog = false
+                            onLogOut()
+                        }
+                    },
+                    enabled = !isDeletingAccount,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    if (isDeletingAccount) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        Text(text = "Delete")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteDialog = false },
+                    enabled = !isDeletingAccount
+                ) {
+                    Text(text = "Cancel")
                 }
             }
         )
@@ -89,7 +150,7 @@ fun SettingsScreen(onLogOut: () -> Unit = {}) {
                 AccountRow(
                     icon = Icons.Default.MailOutline,
                     label = "Email Address",
-                    value = "alex.hunter@example.com",
+                    value = accountEmail,
                     actionText = "Edit",
                     onActionClick = {
                         scope.launch {
@@ -169,14 +230,13 @@ fun SettingsScreen(onLogOut: () -> Unit = {}) {
             SectionHeader("PRIVACY & SECURITY")
             SettingsCard {
                 ChevronRow(
-                    icon = Icons.Default.LocationOn,
-                    title = "Location Services",
-                    subtitle = "While using the app"
-                )
-                HorizontalDivider(color = SlateBorderFaint)
-                ChevronRow(
                     icon = Icons.Default.Policy,
-                    title = "Privacy Policy"
+                    title = "Privacy Policy",
+                    onClick = {
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(privacyUrl)))
+                        }
+                    }
                 )
             }
 
@@ -200,6 +260,32 @@ fun SettingsScreen(onLogOut: () -> Unit = {}) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = "Log Out", style = MaterialTheme.typography.labelLarge)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            HorizontalDivider(color = SlateBorderFaint)
+            Spacer(modifier = Modifier.height(24.dp))
+
+            SectionHeader("DANGER ZONE")
+
+            Button(
+                onClick = { showDeleteDialog = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DeleteForever,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Delete Account", style = MaterialTheme.typography.labelLarge)
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -350,11 +436,13 @@ private fun ToggleRow(
 private fun ChevronRow(
     icon: ImageVector,
     title: String,
-    subtitle: String? = null
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .padding(vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

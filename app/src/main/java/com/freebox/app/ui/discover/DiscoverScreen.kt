@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
@@ -69,7 +68,6 @@ fun DiscoverScreen(
 
     // Count how many filter dimensions are non-default for the badge.
     val activeFilterCount = listOf(
-        filters.radiusMiles != defaultFilters.radiusMiles,
         filters.minProfit != defaultFilters.minProfit,
         filters.quickSelects.isNotEmpty(),
         filters.sources != defaultFilters.sources
@@ -242,45 +240,11 @@ fun DiscoverScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Curated Finds",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            // Tonal scan entry — the solid-green primary CTA lives on the cards.
-            Surface(
-                onClick = onOpenScanner,
-                modifier = Modifier.height(44.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CameraAlt,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Scan",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
+        Text(
+            text = "Curated Finds",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -334,6 +298,7 @@ fun DiscoverScreen(
                             location = item.location,
                             timeAgo = item.timeAgo,
                             estProfit = item.estProfit,
+                            imageUrl = item.imageUrl,
                             onClick = { onItemClick(item.id) }
                         )
                     }

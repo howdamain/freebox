@@ -2,7 +2,6 @@ package com.freebox.app.data
 
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -26,11 +25,5 @@ object EntitlementRepository {
             }
         }.decodeList<EntitlementDto>()
         return rows.isNotEmpty()
-    }
-
-    // DEV ONLY — self-grants an active entitlement via the dev_grant_entitlement()
-    // RPC so the paywall can be tested without Play Billing. Drop before production.
-    suspend fun devGrant() {
-        supabase.postgrest.rpc("dev_grant_entitlement")
     }
 }

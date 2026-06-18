@@ -1,0 +1,42 @@
+name: Freebox scraper
+
+# Runs the demand-driven scraper on a schedule (free GitHub-hosted runner — no
+# server to manage). Only zips with active crawl_targets are crawled, so each run
+# is light. Craigslist + OfferUp are browser-free httpx, so no Chromium is needed;
+# the worker skips launching it automatically (Facebook, if ever re-enabled, would
+# require adding `playwright install chromium` below).
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # every 30 minutes (UTC)
+  workflow_dispatch: {}        # allow manual runs from the Actions tab
+
+# Don't let a slow run overlap the next scheduled one.
+concurrency:
+  group: freebox-scraper
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r scraper/requirements.txt
+
+      - name: Run one crawl pass
+        working-directory: scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+          # Optional — only needed when hosted scraping hits datacenter-IP blocks:
+          PROXY_URL: ${{ secrets.PROXY_URL }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: python -m freebox_scraper.worker --once --log-level INFO

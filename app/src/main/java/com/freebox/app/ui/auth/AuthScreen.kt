@@ -36,6 +36,7 @@ fun AuthScreen(
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    var referralCode by rememberSaveable { mutableStateOf("") }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
@@ -105,6 +106,31 @@ fun AuthScreen(
                 shape = RoundedCornerShape(16.dp)
             )
 
+            if (isSignUp) {
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = referralCode,
+                    onValueChange = { referralCode = it },
+                    label = { Text("Referral code (optional)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                )
+            }
+
+            if (!isSignUp) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                    TextButton(onClick = { vm.resetPassword(email) }) {
+                        Text(
+                            text = "Forgot password?",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
+            }
+
             if (ui.error != null) {
                 Spacer(Modifier.height(12.dp))
                 Text(ui.error!!, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
@@ -117,7 +143,7 @@ fun AuthScreen(
             Spacer(Modifier.height(32.dp))
 
             Button(
-                onClick = { if (isSignUp) vm.signUp(email, password) else vm.signIn(email, password) },
+                onClick = { if (isSignUp) vm.signUp(email, password, referralCode) else vm.signIn(email, password) },
                 enabled = !ui.loading,
                 modifier = Modifier
                     .fillMaxWidth()

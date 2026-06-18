@@ -25,12 +25,12 @@ data class ListingDto(
     @SerialName("finder_name") val finderName: String? = null,
     @SerialName("finder_note") val finderNote: String? = null,
     @SerialName("image_url") val imageUrl: String? = null,
+    val url: String? = null,
     @SerialName("posted_at") val postedAt: String? = null,
     val status: String = "available"
 )
 
-// Maps a DB row to the display model the screens already use. Distance stays a
-// placeholder until GPS lands (Phase 7); the filter predicate treats 0.0 as "passes".
+// Maps a DB row to the display model the screens use.
 fun ListingDto.toLootItem(): LootItem = LootItem(
     id = id,
     title = title,
@@ -41,12 +41,12 @@ fun ListingDto.toLootItem(): LootItem = LootItem(
     estProfit = "+$${estProfit ?: 0}",
     resaleValue = "$${estResaleValue ?: 0}",
     condition = condition ?: "—",
-    distanceAway = "nearby",
     finderName = finderName ?: "A scavenger",
     finderNote = finderNote ?: "",
     sourceName = source,
-    distanceMiles = 0.0,
-    profitValue = estProfit ?: 0
+    profitValue = estProfit ?: 0,
+    url = url,
+    imageUrl = imageUrl
 )
 
 // Dependency-free ISO-8601 relative time (java.time needs desugaring at minSdk 24).

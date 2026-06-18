@@ -26,9 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.SubcomposeAsyncImage
 import com.freebox.app.ui.theme.SlateBorderFaint
 import com.freebox.app.ui.theme.SlateOutline
 import com.freebox.app.ui.theme.SoftSlate
@@ -57,6 +59,30 @@ fun PlaceholderImage(
             modifier = Modifier.size(40.dp)
         )
     }
+}
+
+// Shows the real listing photo when one exists, with the category placeholder as
+// the loading / error / no-photo fallback. Every listing therefore renders a
+// complete visual — a real photo where the source has one, an honest branded
+// placeholder where it genuinely doesn't.
+@Composable
+fun ListingImage(
+    imageUrl: String?,
+    category: String,
+    modifier: Modifier = Modifier
+) {
+    if (imageUrl.isNullOrBlank()) {
+        PlaceholderImage(category = category, modifier = modifier)
+        return
+    }
+    SubcomposeAsyncImage(
+        model = imageUrl,
+        contentDescription = null,  // decorative — the card announces title/category
+        contentScale = ContentScale.Crop,
+        modifier = modifier,
+        loading = { PlaceholderImage(category = category, modifier = Modifier.fillMaxSize()) },
+        error = { PlaceholderImage(category = category, modifier = Modifier.fillMaxSize()) },
+    )
 }
 
 fun categoryIcon(category: String): ImageVector = when (category.lowercase()) {
@@ -131,13 +157,14 @@ fun LootCard(
                     .padding(8.dp)
                     .clip(RoundedCornerShape(12.dp))
             ) {
-                PlaceholderImage(
+                ListingImage(
+                    imageUrl = imageUrl,
                     category = category,
                     modifier = Modifier.fillMaxSize()
                 )
 
                 ProfitChip(
-                    text = "$estProfit Est.",
+                    text = "~$estProfit resale",
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(12.dp)

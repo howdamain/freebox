@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.freebox.app.data.LootItem
 import com.freebox.app.data.ProfitAlert
-import com.freebox.app.ui.components.PlaceholderImage
+import com.freebox.app.ui.components.ListingImage
 import com.freebox.app.ui.components.ProfitChip
 import com.freebox.app.ui.theme.FreeboxTheme
 import com.freebox.app.ui.theme.SlateBorderFaint
@@ -51,7 +51,7 @@ fun VaultScreen(onCreateAlert: () -> Unit = {}) {
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
-            text = "Manage your saved items and track potential profits.",
+            text = "Manage your saved items and track potential resale value.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp)
@@ -74,7 +74,7 @@ fun VaultScreen(onCreateAlert: () -> Unit = {}) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 TabButton(
-                    label = "Profit Alerts",
+                    label = "Resale Alerts",
                     count = ui.alerts.size.takeIf { !ui.alertsLoading && it > 0 }?.toString(),
                     isSelected = selectedTab == 1,
                     isAlert = true,
@@ -275,7 +275,8 @@ fun VaultCard(item: LootItem) {
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
-            PlaceholderImage(
+            ListingImage(
+                imageUrl = item.imageUrl,
                 category = item.category,
                 modifier = Modifier
                     .size(width = 120.dp, height = 80.dp)
@@ -315,7 +316,7 @@ fun VaultCard(item: LootItem) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ProfitChip(text = "Est. Profit ${item.estProfit}")
+                    ProfitChip(text = "Est. resale ${item.estProfit}")
                     Text(
                         text = "Free",
                         style = MaterialTheme.typography.labelLarge,
@@ -355,7 +356,7 @@ fun AlertsContent(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Set a profit alert and we'll ping you the second a matching drop lands.",
+                text = "Set a resale alert and we'll ping you the second a matching drop lands.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -429,7 +430,7 @@ fun AlertCard(alert: ProfitAlert, onDelete: () -> Unit = {}) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
                         Text(
-                            text = "$${alert.minProfit}+ profit",
+                            text = "$${alert.minProfit}+ est. resale",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,

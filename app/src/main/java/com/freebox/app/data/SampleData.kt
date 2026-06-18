@@ -6,16 +6,13 @@ package com.freebox.app.data
  *
  * Quick-select semantics:
  *   "High Margin"  -> profitValue >= 200
- *   "Fast Flip"    -> distanceMiles <= 5
  *   "Rare"         -> no-op placeholder (maps to a backend rarity flag in Phase 5)
  */
 fun matchesFilters(item: LootItem, filters: SearchFilters): Boolean {
     val defaultSources = SearchFilters().sources
     if (item.profitValue < filters.minProfit) return false
-    if (item.distanceMiles > filters.radiusMiles) return false
     if (filters.sources != defaultSources && item.sourceName !in filters.sources) return false
     if ("High Margin" in filters.quickSelects && item.profitValue < 200) return false
-    if ("Fast Flip" in filters.quickSelects && item.distanceMiles > 5.0) return false
     // "Rare" -> backend rarity flag; no local predicate yet
     return true
 }
@@ -30,13 +27,13 @@ data class LootItem(
     val estProfit: String,
     val resaleValue: String,
     val condition: String,
-    val distanceAway: String,
     val finderName: String,
     val finderNote: String,
     // Filter-queryable fields — mirrors future `listings` table columns.
     val sourceName: String,      // "Facebook Marketplace" | "Craigslist" | "OfferUp"
-    val distanceMiles: Double,   // numeric form of distanceAway
-    val profitValue: Int         // numeric form of estProfit (dollars)
+    val profitValue: Int,        // numeric form of estProfit (dollars)
+    val url: String? = null,     // absolute link to the original source listing
+    val imageUrl: String? = null // primary photo (null → category placeholder)
 )
 
 object SampleData {
@@ -51,11 +48,9 @@ object SampleData {
             estProfit = "+$350",
             resaleValue = "$350",
             condition = "Good",
-            distanceAway = "0.8 mi away",
             finderName = "Alex T. (Top Contributor)",
             finderNote = "Spotted on the curb this morning. Owner confirmed it's free to whoever picks it up first. Bring a truck — it's heavier than it looks.",
             sourceName = "Facebook Marketplace",
-            distanceMiles = 0.8,
             profitValue = 350
         ),
         LootItem(
@@ -68,11 +63,9 @@ object SampleData {
             estProfit = "+$150",
             resaleValue = "$150",
             condition = "Excellent",
-            distanceAway = "1.2 mi away",
             finderName = "Jordan M.",
             finderNote = "Estate sale leftovers on the porch. Belt is stretched but the motor spins clean.",
             sourceName = "Craigslist",
-            distanceMiles = 1.2,
             profitValue = 150
         ),
         LootItem(
@@ -85,11 +78,9 @@ object SampleData {
             estProfit = "+$85",
             resaleValue = "$85",
             condition = "Untested",
-            distanceAway = "2.4 mi away",
             finderName = "Sam R.",
             finderNote = "Charity shop free bin. Shutter fires at all speeds by ear.",
             sourceName = "OfferUp",
-            distanceMiles = 2.4,
             profitValue = 85
         ),
         LootItem(
@@ -102,11 +93,9 @@ object SampleData {
             estProfit = "+$200",
             resaleValue = "$200",
             condition = "Powers On",
-            distanceAway = "3.1 mi away",
             finderName = "Casey L.",
             finderNote = "Office cleanout. Includes original keyboard and mouse, no disks.",
             sourceName = "Craigslist",
-            distanceMiles = 3.1,
             profitValue = 200
         )
     )

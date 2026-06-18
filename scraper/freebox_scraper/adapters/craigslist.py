@@ -283,9 +283,10 @@ class CraigslistAdapter(SourceAdapter):
         Fetch free listings from the Craigslist region matching `zip_code`.
         """
         subdomain = _zip_to_subdomain(zip_code)
+        base_url = f"https://{subdomain}.craigslist.org"
         # ⚠️ VERIFY: correct URL path for the free-stuff section in your region.
         # Common alternatives: /search/fre  /search/zip  /free
-        url = f"https://{subdomain}.craigslist.org/search/{_FREE_SECTION}"
+        url = f"{base_url}/search/{_FREE_SECTION}"
         params: dict[str, str] = {
             # ⚠️ VERIFY: Craigslist may not honour postal_code query param;
             # subdomain-level proximity may be the only geographic filter.
@@ -313,14 +314,14 @@ class CraigslistAdapter(SourceAdapter):
             len(html), zip_code, html[:300],
         )
 
-        listings = self._parse_html(html, zip_code)
+        listings = self._parse_html(html, zip_code, base_url)
         log.info(
             "Craigslist: %d listing(s) for zip=%s (subdomain=%s)",
             len(listings), zip_code, subdomain,
         )
         return listings
 
-    def _parse_html(self, html: str, zip_code: str) -> list[NormalizedListing]:
+    def _parse_html(self, html: str, zip_code: str, base_url: str) -> list[NormalizedListing]:
         """
         Parse Craigslist search-results HTML into NormalizedListing objects.
 
@@ -335,7 +336,8 @@ class CraigslistAdapter(SourceAdapter):
         results: list[NormalizedListing] = []
 
         # ⚠️ VERIFY: selector covers both legacy and current CL markup
-        rows = soup.select("li.cl-search-result, li.result-row")
+        # Current CL free section: <li class="cl-static-search-result"> (static, JS-free).
+        rows = soup.select("li.cl-static-search-result, li.cl-search-result, li.result-row")
         if not rows:
             log.warning(
                 "Craigslist: no listing rows found for zip=%s. "
@@ -345,13 +347,13 @@ class CraigslistAdapter(SourceAdapter):
             return results
 
         for row in rows:
-            listing = self._parse_row(row, zip_code)
+            listing = self._parse_row(row, zip_code, base_url)
             if listing is not None:
                 results.append(listing)
 
         return results
 
-    def _parse_row(self, row: Any, zip_code: str) -> NormalizedListing | None:
+    def _parse_row(self, row: Any, zip_code: str, base_url: str) -> NormalizedListing | None:
         """Parse one search-result row element."""
         log.debug("Craigslist raw row HTML: %s", str(row)[:300])
 
@@ -361,7 +363,7 @@ class CraigslistAdapter(SourceAdapter):
             str(row.get("data-id") or "").strip()
             or str(row.get("data-pid") or "").strip()
         )
-        link = row.select_one("a.cl-app-anchor, a.result-title")
+        link = row.select_one("a")
         href = link.get("href", "") if link else ""
         if not listing_id:
             listing_id = _id_from_url(href)
@@ -369,10 +371,17 @@ class CraigslistAdapter(SourceAdapter):
             log.warning("Craigslist row missing ID, skipping.")
             return None
 
+        # ── Original-listing URL (absolute) ──
+        listing_url: str | None = None
+        if href:
+            listing_url = href if href.startswith("http") else f"{base_url}{href}"
+
         # ── Title ──
         # ⚠️ VERIFY: may be in .label, .result-title, or the <a> text
-        title_el = row.select_one(".label, .result-title, a.cl-app-anchor")
+        title_el = row.select_one("div.title, .label, .result-title, a.cl-app-anchor")
         title = (title_el.get_text(strip=True) if title_el else "").strip()
+        if not title:
+            title = str(row.get("title") or "").strip()  # <li title="..."> fallback
         if not title:
             log.warning("Craigslist listing %s missing title, skipping.", listing_id)
             return None
@@ -420,6 +429,7 @@ class CraigslistAdapter(SourceAdapter):
             longitude=None,
             zip=zip_code,
             image_url=image_url,
+            url=listing_url,
             posted_at=posted_at,
             price="Free",
             status="available",

@@ -1,9 +1,0 @@
-com.freebox.app-pngs-0 /Users/xayonyurx/Downloads/stitch_local_freebie_radar/app/build/generated/res/pngs/release
-com.freebox.app-updated_navigation_xml-1 /Users/xayonyurx/Downloads/stitch_local_freebie_radar/app/build/generated/updated_navigation_xml/release
-com.freebox.app-packageReleaseResources-2 /Users/xayonyurx/Downloads/stitch_local_freebie_radar/app/build/intermediates/incremental/release/packageReleaseResources/merged.dir
-com.freebox.app-packageReleaseResources-3 /Users/xayonyurx/Downloads/stitch_local_freebie_radar/app/build/intermediates/incremental/release/packageReleaseResources/stripped.dir
-com.freebox.app-merged-not-compiled-resources-4 /Users/xayonyurx/Downloads/stitch_local_freebie_radar/app/build/intermediates/merged-not-compiled-resources/release
-com.freebox.app-release-5 /Users/xayonyurx/Downloads/stitch_local_freebie_radar/app/build/intermediates/merged_res/release/mergeReleaseResources
-com.freebox.app-main-6 /Users/xayonyurx/Downloads/stitch_local_freebie_radar/app/src/main/res
-com.freebox.app-release-7 /Users/xayonyurx/Downloads/stitch_local_freebie_radar/app/src/release/res
-gradleHome-0 /Users/xayonyurx/.gradle

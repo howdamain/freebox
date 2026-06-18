@@ -34,7 +34,6 @@ fun SearchFiltersScreen(
         restore = { mutableStateOf(it.toSet()) }
     )
     var quickSelects by rememberSaveable(initialFilters, saver = stringSetSaver) { mutableStateOf(initialFilters.quickSelects) }
-    var radiusMiles by rememberSaveable(initialFilters) { mutableStateOf(initialFilters.radiusMiles.toFloat()) }
     var minProfit by rememberSaveable(initialFilters) { mutableStateOf(initialFilters.minProfit.toFloat()) }
     var sources by rememberSaveable(initialFilters, saver = stringSetSaver) { mutableStateOf(initialFilters.sources) }
 
@@ -74,7 +73,6 @@ fun SearchFiltersScreen(
                     onClick = {
                         val defaults = SearchFilters()
                         quickSelects = defaults.quickSelects
-                        radiusMiles = defaults.radiusMiles.toFloat()
                         minProfit = defaults.minProfit.toFloat()
                         sources = defaults.sources
                     },
@@ -107,12 +105,6 @@ fun SearchFiltersScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         QuickSelectChip(
-                            label = "Fast Flip",
-                            icon = Icons.Default.Bolt,
-                            isSelected = "Fast Flip" in quickSelects,
-                            onClick = { quickSelects = quickSelects.toggle("Fast Flip") }
-                        )
-                        QuickSelectChip(
                             label = "High Margin",
                             icon = Icons.Default.Payments,
                             isSelected = "High Margin" in quickSelects,
@@ -123,57 +115,6 @@ fun SearchFiltersScreen(
                             icon = Icons.Default.Diamond,
                             isSelected = "Rare" in quickSelects,
                             onClick = { quickSelects = quickSelects.toggle("Rare") }
-                        )
-                    }
-                }
-
-                // Loot Radius
-                FilterCard {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Radar,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outline,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Loot radius",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        ValueChip(text = "${radiusMiles.roundToInt()} miles")
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Slider(
-                        value = radiusMiles,
-                        onValueChange = { radiusMiles = it },
-                        valueRange = 1f..50f,
-                        colors = SliderDefaults.colors(
-                            thumbColor = MaterialTheme.colorScheme.primary,
-                            activeTrackColor = MaterialTheme.colorScheme.primary,
-                            inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
-                        )
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "1 mi",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "50 mi",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -268,7 +209,6 @@ fun SearchFiltersScreen(
                         onApply(
                             SearchFilters(
                                 quickSelects = quickSelects,
-                                radiusMiles = radiusMiles.roundToInt(),
                                 minProfit = minProfit.roundToInt(),
                                 sources = sources
                             )

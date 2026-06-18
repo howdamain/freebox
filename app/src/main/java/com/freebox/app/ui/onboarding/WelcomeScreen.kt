@@ -40,7 +40,6 @@ import kotlinx.coroutines.launch
 fun WelcomeScreen(
     onStartClick: () -> Unit = {}
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var showHowItWorks by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
@@ -87,14 +86,7 @@ fun WelcomeScreen(
                     }
 
                     Button(
-                        onClick = {
-                            // Accounts aren't wired to a backend yet — be honest about it.
-                            scope.launch {
-                                snackbarHostState.showSnackbar(
-                                    "Accounts are coming soon. Your finds stay on this device for now."
-                                )
-                            }
-                        },
+                        onClick = onStartClick,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             contentColor = MaterialTheme.colorScheme.secondary
@@ -238,10 +230,6 @@ fun WelcomeScreen(
                 }
             }
 
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
         }
     }
 

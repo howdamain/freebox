@@ -6,6 +6,8 @@ import com.freebox.app.data.supabase
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -39,7 +41,7 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun signUp(email: String, password: String) {
+    fun signUp(email: String, password: String, referralCode: String = "") {
         if (!validate(email, password)) return
         _ui.value = AuthUiState(loading = true)
         viewModelScope.launch {
@@ -47,6 +49,10 @@ class AuthViewModel : ViewModel() {
                 supabase.auth.signUpWith(Email) {
                     this.email = email.trim()
                     this.password = password
+                    val code = referralCode.trim()
+                    if (code.isNotEmpty()) {
+                        data = buildJsonObject { put("referral_code", code) }
+                    }
                 }
                 // If the project requires email confirmation, no session is set yet.
                 _ui.value = if (supabase.auth.currentSessionOrNull() == null) {
@@ -63,6 +69,17 @@ class AuthViewModel : ViewModel() {
     fun signOut() {
         viewModelScope.launch {
             try { supabase.auth.signOut() } catch (_: Exception) {}
+        }
+    }
+
+    fun resetPassword(email: String) {
+        if (email.isBlank() || !email.contains("@")) {
+            _ui.value = AuthUiState(error = "Enter a valid email address.")
+            return
+        }
+        viewModelScope.launch {
+            runCatching { supabase.auth.resetPasswordForEmail(email.trim()) }
+            _ui.value = AuthUiState(info = "If that email exists, a reset link is on its way.")
         }
     }
 

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Diamond
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.*
@@ -31,9 +32,13 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.freebox.app.data.AreaTeaser
+import com.freebox.app.data.TeaserRepository
+import com.freebox.app.data.TeaserSample
 import com.freebox.app.ui.theme.FreeboxTheme
 import com.freebox.app.ui.theme.GoldAccent
 import com.freebox.app.ui.theme.ProfitGreenDeep
@@ -46,8 +51,12 @@ fun ProScreen(
     onStartTrial: () -> Unit = {},
     working: Boolean = false
 ) {
-    var selectedPlan by rememberSaveable { mutableStateOf("Yearly") }
+    var selectedPlan by rememberSaveable { mutableStateOf("Monthly") }
     var unlocked by rememberSaveable { mutableStateOf(false) }
+    // Real local proof for this user's ZIP (count + total + locked teasers).
+    val teaser by produceState<AreaTeaser?>(initialValue = null) {
+        value = runCatching { TeaserRepository.myAreaTeaser() }.getOrNull()
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -107,31 +116,54 @@ fun ProScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Headline — gold-to-green gradient on the money words.
-                Text(
-                    text = buildAnnotatedString {
-                        append("Unlock ")
-                        withStyle(
-                            SpanStyle(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(
-                                        GoldAccent,
-                                        MaterialTheme.colorScheme.primary
-                                    )
-                                )
-                            )
-                        ) {
-                            append("Maximum Profit")
+                // Personalized proof — REAL local numbers (capped to actual data).
+                val t = teaser
+                if (t != null && t.itemCount > 0) {
+                    Text(
+                        text = buildAnnotatedString {
+                            append("${t.itemCount} free finds worth ")
+                            withStyle(
+                                SpanStyle(brush = Brush.linearGradient(listOf(GoldAccent, MaterialTheme.colorScheme.primary)))
+                            ) { append("~\$%,d".format(t.totalValue)) }
+                            append(" near you")
+                        },
+                        style = MaterialTheme.typography.displaySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Est. resale value — not guaranteed profit. Unlock to see exactly where and claim them first.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    if (t.sample.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            t.sample.take(4).forEach { LockedTeaserRow(it) }
                         }
-                    },
-                    style = MaterialTheme.typography.displayMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+                    }
+                } else {
+                    Text(
+                        text = "Free, flippable finds drop near you",
+                        style = MaterialTheme.typography.displaySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "We're expanding to your area — subscribe to unlock finds the moment they land.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+                // Own the scam objection up front.
                 Text(
-                    text = "Go Pro and out-scout every flipper in town with tools built for serious treasure hunters.",
-                    style = MaterialTheme.typography.bodyLarge,
+                    text = "Yes — another \"find money\" app. The difference: the stuff's genuinely free and real, pulled from live local listings. See for yourself.",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
@@ -166,21 +198,23 @@ fun ProScreen(
 
                 // Plan selector
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    PlanCard(
-                        title = "Yearly",
-                        subtitle = "Best Value",
-                        price = "$29.99",
-                        period = "/yr",
-                        badge = "SAVE 50%",
-                        isSelected = selectedPlan == "Yearly",
-                        onClick = { selectedPlan = "Yearly" }
-                    )
+                    // Monthly first + pre-selected: the MRR engine and lower-friction yes.
                     PlanCard(
                         title = "Monthly",
-                        price = "$4.99",
+                        subtitle = "Most popular",
+                        price = "$9.99",
                         period = "/mo",
                         isSelected = selectedPlan == "Monthly",
                         onClick = { selectedPlan = "Monthly" }
+                    )
+                    PlanCard(
+                        title = "Yearly",
+                        subtitle = "Save 67% · 3-day free trial",
+                        price = "$39.99",
+                        period = "/yr",
+                        badge = "SAVE 67%",
+                        isSelected = selectedPlan == "Yearly",
+                        onClick = { selectedPlan = "Yearly" }
                     )
                 }
 
@@ -256,15 +290,19 @@ fun ProScreen(
                                         strokeWidth = 2.dp
                                     )
                                 } else {
+                                    // Trial is annual-only; monthly subscribes directly.
                                     Text(
-                                        text = "Start 7-Day Free Trial",
+                                        text = if (selectedPlan == "Yearly") "Start 3-Day Free Trial" else "Subscribe · $9.99/mo",
                                         style = MaterialTheme.typography.labelLarge
                                     )
                                 }
                             }
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "Cancel anytime. No treasure left behind.",
+                                text = if (selectedPlan == "Yearly")
+                                    "$39.99/yr — save 67%, one flip pays for the year. 3-day free trial, cancel anytime."
+                                else
+                                    "$9.99/mo — less than one flip. Cancel anytime.",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
@@ -272,6 +310,47 @@ fun ProScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LockedTeaserRow(sample: TeaserSample) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        border = BorderStroke(1.dp, SlateBorderFaint)
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = sample.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "est. resale $${sample.value ?: 0}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "location locked",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

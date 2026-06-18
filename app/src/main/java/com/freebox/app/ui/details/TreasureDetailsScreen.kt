@@ -1,13 +1,7 @@
 package com.freebox.app.ui.details
 
 import android.content.Intent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -27,24 +21,21 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.freebox.app.data.LootItem
 import com.freebox.app.data.VaultRepository
 import kotlinx.coroutines.launch
-import com.freebox.app.ui.components.PlaceholderImage
+import com.freebox.app.ui.components.ListingImage
 import com.freebox.app.ui.theme.FreeboxTheme
 import com.freebox.app.ui.theme.SlateBorderFaint
 
 @Composable
 fun TreasureDetailsScreen(
     item: LootItem,
-    onBack: () -> Unit,
-    onClaim: () -> Unit = {}
+    onBack: () -> Unit
 ) {
-    var claimed by rememberSaveable { mutableStateOf(false) }
     var favorited by rememberSaveable { mutableStateOf(false) }
 
     // Reflect and persist the watchlist membership for this listing.
@@ -70,7 +61,8 @@ fun TreasureDetailsScreen(
                     .fillMaxWidth()
                     .height(300.dp)
             ) {
-                PlaceholderImage(
+                ListingImage(
+                    imageUrl = item.imageUrl,
                     category = item.category,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -95,7 +87,7 @@ fun TreasureDetailsScreen(
                                 type = "text/plain"
                                 putExtra(
                                     Intent.EXTRA_TEXT,
-                                    "Free find on Freebox: ${item.title} — ${item.location}"
+                                    "I found this FREE on Freebox — est. resale ~${item.resaleValue}. Real free finds near you 👀 Get the Freebox app."
                                 )
                             }
                             context.startActivity(Intent.createChooser(shareIntent, "Share this find"))
@@ -176,7 +168,7 @@ fun TreasureDetailsScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Curbside • ${item.location} (${item.distanceAway})",
+                        text = "Curbside • ${item.location}",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -198,7 +190,7 @@ fun TreasureDetailsScreen(
                         icon = Icons.Default.Payments,
                         iconTint = MaterialTheme.colorScheme.primary,
                         badge = "Estimated",
-                        label = "RESALE VALUE",
+                        label = "EST. RESALE",
                         value = item.resaleValue,
                         valueColor = MaterialTheme.colorScheme.secondary
                     )
@@ -298,14 +290,13 @@ fun TreasureDetailsScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Location",
+                    text = "Where to find it",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Map Preview
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -313,103 +304,45 @@ fun TreasureDetailsScreen(
                     border = androidx.compose.foundation.BorderStroke(1.dp, SlateBorderFaint),
                     shadowElevation = 0.dp
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(220.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Text(
-                            text = "Map",
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(12.dp)
-                        )
-
-                        // Claiming swaps the locked pill for the revealed address (state change -> motion).
-                        Crossfade(
-                            targetState = claimed,
-                            animationSpec = tween(250),
-                            modifier = Modifier.align(Alignment.Center),
-                            label = "mapReveal"
-                        ) { isClaimed ->
-                            if (isClaimed) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.CheckCircle,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(
-                                                text = "Address Revealed",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Surface(color = Color.White, shape = CircleShape) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.LocationOn,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = item.location,
-                                                style = MaterialTheme.typography.labelLarge,
-                                                color = MaterialTheme.colorScheme.onSurface,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-                            } else {
-                                // Quiet status row — informational, not a button.
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Lock,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Reveal Exact Location",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = item.location,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Storefront,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Listed via ${item.sourceName}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Freebox surfaces these from public listings. Open the original post for photos, the exact pickup spot, and to contact the owner.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = if (claimed) "You claimed this listing" else "Exact address revealed upon claiming",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
 
                 Spacer(modifier = Modifier.height(150.dp))
             }
@@ -425,48 +358,35 @@ fun TreasureDetailsScreen(
         ) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                val link = item.url
                 Button(
                     onClick = {
-                        if (!claimed) {
-                            claimed = true
-                            onClaim()
+                        if (link != null) {
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)))
+                            }
                         }
                     },
-                    enabled = !claimed,
+                    enabled = link != null,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
-                        disabledContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        disabledContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
                     Icon(
-                        imageVector = if (claimed) Icons.Default.CheckCircle else Icons.Default.DirectionsRun,
+                        imageVector = Icons.Default.Launch,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (claimed) "Claimed — Address Revealed" else "Claim Listing",
+                        text = if (link != null) "View Original Listing" else "Original Link Unavailable",
                         style = MaterialTheme.typography.labelLarge
-                    )
-                }
-                AnimatedVisibility(
-                    visible = claimed,
-                    enter = fadeIn(tween(250)) + expandVertically(tween(250)),
-                    exit = fadeOut(tween(200)) + shrinkVertically(tween(200))
-                ) {
-                    Text(
-                        text = "You've got dibs. Head over before it's gone.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp)
                     )
                 }
             }
@@ -588,11 +508,9 @@ fun TreasureDetailsScreenPreview() {
                 estProfit = "+$350",
                 resaleValue = "$350",
                 condition = "Good",
-                distanceAway = "0.8 mi away",
                 finderName = "Alex T. (Top Contributor)",
                 finderNote = "Spotted on the curb this morning. Owner confirmed it's free to whoever picks it up first. Bring a truck — it's heavier than it looks.",
                 sourceName = "Facebook Marketplace",
-                distanceMiles = 0.8,
                 profitValue = 350
             ),
             onBack = {}

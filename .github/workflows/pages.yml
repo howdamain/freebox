@@ -1,0 +1,37 @@
+name: Deploy legal pages (GitHub Pages)
+
+# Publishes web/ (privacy.html + delete-account.html) to GitHub Pages so the
+# Play-required privacy-policy URL and data-deletion URL are publicly hosted.
+# One-time setup: repo Settings → Pages → Source = "GitHub Actions". After the
+# first run the pages live at https://<owner>.github.io/<repo>/privacy.html and
+# .../delete-account.html — put those URLs in the Play listing and in
+# app/src/main/res/values/strings.xml (privacy_policy_url / data_deletion_url).
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/pages.yml"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: deployment
+        uses: actions/deploy-pages@v4

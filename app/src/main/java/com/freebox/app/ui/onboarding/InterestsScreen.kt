@@ -85,7 +85,7 @@ fun InterestsScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(0.5f) // Step 2 of 4
+                        .fillMaxWidth(0.25f) // Step 1 of 4
                         .fillMaxHeight()
                         .background(MaterialTheme.colorScheme.primary, CircleShape)
                 )
@@ -99,7 +99,7 @@ fun InterestsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Step 2 of 4",
+                    text = "Step 1 of 4",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

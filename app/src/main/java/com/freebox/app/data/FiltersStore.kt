@@ -6,7 +6,6 @@ import androidx.compose.runtime.setValue
 
 data class SearchFilters(
     val quickSelects: Set<String> = emptySet(),
-    val radiusMiles: Int = 25,
     val minProfit: Int = 50,
     val sources: Set<String> = setOf("Facebook Marketplace", "Craigslist", "OfferUp")
 )

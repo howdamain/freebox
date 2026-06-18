@@ -446,6 +446,8 @@ class FacebookAdapter(SourceAdapter):
     verification via --log-level DEBUG.
     """
 
+    requires_browser = True  # uses the shared Playwright session for GraphQL interception
+
     @property
     def source_name(self) -> str:
         return "Facebook Marketplace"

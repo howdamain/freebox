@@ -263,7 +263,6 @@ private fun FreeboxNavHost(
 
         composable("details/{itemId}") { backStackEntry ->
             val id = backStackEntry.arguments?.getString("itemId")
-            val scope = rememberCoroutineScope()
             // Load the live listing from Supabase by id (RLS-gated by entitlement).
             val load = produceState<DetailLoad>(DetailLoad.Loading, id) {
                 value = id?.let { runCatching { ListingsRepository.fetchById(it) }.getOrNull() }
@@ -274,8 +273,7 @@ private fun FreeboxNavHost(
                 DetailLoad.Missing -> LaunchedEffect(Unit) { navController.popBackStack() }
                 is DetailLoad.Loaded -> TreasureDetailsScreen(
                     item = s.item,
-                    onBack = { navController.popBackStackSafe() },
-                    onClaim = { scope.launch { runCatching { ListingsRepository.claim(s.item.id) } } }
+                    onBack = { navController.popBackStackSafe() }
                 )
             }
         }

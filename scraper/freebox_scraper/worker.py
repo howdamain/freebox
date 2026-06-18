@@ -31,11 +31,14 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import logging
 import sys
 import time
 from typing import Any
 
+from freebox_scraper import pricing
+from freebox_scraper import images
 from freebox_scraper import config
 from freebox_scraper.browser import BrowserSession
 from freebox_scraper.adapters import ADAPTERS
@@ -74,12 +77,27 @@ async def run_pass() -> dict[str, Any]:
 
     # Accumulate all valid listings across all targets for batch dedup at the end.
     batch: list[NormalizedListing] = []
+    # Validated-but-not-yet-priced listings per target. Pricing is deferred until
+    # after the fetch loop so the whole pass is priced in ONE batched Perplexity
+    # call (single-pass — avoids per-target request bursts and the cross-call cache
+    # race; see the parallelization audit).
+    pending: list[tuple[dict[str, Any], str, list[NormalizedListing]]] = []
     # Track successfully processed targets for mark_crawled after upsert.
     target_result_counts: list[tuple[dict[str, Any], int]] = []
 
     total_fetched = 0
 
-    async with BrowserSession() as browser:
+    # Only launch Chromium if a due target actually needs it (Facebook). With just
+    # the browser-free httpx sources (Craigslist, OfferUp) due, skip it entirely so
+    # hosted/CI runs stay lightweight (no Playwright/Chromium required).
+    needs_browser = any(
+        getattr(ADAPTERS.get(t["source"]), "requires_browser", False) for t in targets
+    )
+    browser_cm = BrowserSession() if needs_browser else contextlib.nullcontext(None)
+    if not needs_browser:
+        log.info("No browser-backed source due this pass — skipping Chromium launch.")
+
+    async with browser_cm as browser:
         for target in targets:
             zip_code: str = target["zip"]
             source: str = target["source"]
@@ -129,31 +147,14 @@ async def run_pass() -> dict[str, Any]:
                     continue
                 valid.append(item)
 
-            # ── Valuation + filter ──
-            valued: list[NormalizedListing] = []
-            for item in valid:
-                item.est_resale_value = valuation.estimate(item.category, item.title)
-                item.est_profit = item.est_resale_value  # free item: no cost basis
-                if valuation.passes_value_filter(item.est_profit):
-                    valued.append(item)
-                else:
-                    log.debug(
-                        "Filtered out low-value listing '%s' (est_profit=%d < %d)",
-                        item.title[:60], item.est_profit, config.MIN_PROFIT,
-                    )
-
-            kept_count = len(valued)
-            stats["items_kept"] += kept_count
-            stats["sources"][source]["kept"] = (
-                stats["sources"][source].get("kept", 0) + kept_count
-            )
-            batch.extend(valued)
-
+            # Defer valuation: stash validated listings and price them all in one
+            # batched Perplexity call after the fetch loop (see `pending` above).
+            pending.append((target, source, valid))
             target_result_counts.append((target, raw_count))
             stats["targets_processed"] += 1
             log.info(
-                "zip=%s source=%s: fetched=%d valid=%d valued=%d",
-                zip_code, source, raw_count, len(valid), kept_count,
+                "zip=%s source=%s: fetched=%d valid=%d",
+                zip_code, source, raw_count, len(valid),
             )
 
             # Throughput cap: stop fetching if we've hit the per-run limit
@@ -166,10 +167,43 @@ async def run_pass() -> dict[str, Any]:
 
     # Browser is now closed.
 
+    # ── Valuation + filter (single batched Perplexity pass over ALL titles) ──
+    # One call over the union of titles: chunks run concurrently under a shared
+    # rate limiter, no title is priced twice, and the cache stays race-free.
+    all_titles = [item.title for _, _, valid in pending for item in valid]
+    price_map = await pricing.batch_values(all_titles)
+    for target, source, valid in pending:
+        kept_count = 0
+        for item in valid:
+            comp = price_map.get(item.title)
+            item.est_resale_value = (
+                comp if comp is not None
+                else valuation.estimate(item.category, item.title)
+            )
+            item.est_profit = item.est_resale_value  # gross resale value (free item)
+            if valuation.passes_value_filter(item.est_profit):
+                batch.append(item)
+                kept_count += 1
+            else:
+                log.debug(
+                    "Filtered out low-value listing '%s' (est_profit=%d < %d)",
+                    item.title[:60], item.est_profit, config.MIN_PROFIT,
+                )
+        stats["items_kept"] += kept_count
+        stats["sources"][source]["kept"] = (
+            stats["sources"][source].get("kept", 0) + kept_count
+        )
+
     # ── Cross-source dedupe ──
     pre_dedupe_count = len(batch)
     batch = dedupe.dedupe_batch(batch)
     stats["items_deduped_out"] = pre_dedupe_count - len(batch)
+
+    # ── Image enrichment ──
+    # Fill a primary photo for kept listings that lack one (Craigslist's search
+    # list omits images; they live on each detail page as og:image). Sources that
+    # already provide images (OfferUp) are skipped automatically.
+    await images.enrich_images(batch)
 
     # ── Upsert ──
     if batch:
@@ -180,6 +214,13 @@ async def run_pass() -> dict[str, Any]:
         except Exception as exc:
             log.error("Supabase upsert failed: %s", exc, exc_info=True)
             stats["items_upserted"] = 0
+
+    # ── Expire stale listings (fell off their source) ──
+    try:
+        stats["items_expired"] = supabase_io.expire_stale_listings(config.LISTING_EXPIRY_DAYS)
+    except Exception as exc:
+        log.error("Listing expiry failed: %s", exc)
+        stats["items_expired"] = 0
 
     # ── Mark crawled for all successfully processed targets ──
     for target, raw_count in target_result_counts:

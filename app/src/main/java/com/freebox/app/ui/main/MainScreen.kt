@@ -18,14 +18,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.freebox.app.R
 import com.freebox.app.ui.discover.DiscoverScreen
-import com.freebox.app.ui.map.MapScreen
 import com.freebox.app.ui.settings.SettingsScreen
 import com.freebox.app.ui.trends.TrendsScreen
 import com.freebox.app.ui.vault.VaultScreen
 
 sealed class Screen(val route: String, val labelId: Int, val icon: ImageVector) {
     object Discover : Screen("discover", R.string.nav_discover, Icons.Default.Explore)
-    object Map : Screen("map", R.string.nav_map, Icons.Default.Map)
     object Vault : Screen("vault", R.string.nav_vault, Icons.Default.AccountBalanceWallet)
     object Trends : Screen("trends", R.string.nav_trends, Icons.AutoMirrored.Filled.TrendingUp)
     object Settings : Screen("settings", R.string.nav_settings, Icons.Default.Settings)
@@ -42,7 +40,6 @@ fun MainScreen(
 ) {
     val screens = listOf(
         Screen.Discover,
-        Screen.Map,
         Screen.Vault,
         Screen.Trends,
         Screen.Settings
@@ -105,7 +102,6 @@ fun MainScreen(
                             onOpenScanner = onOpenScanner,
                             onOpenProfile = onOpenProfile
                         )
-                        Screen.Map -> MapScreen(onItemClick = onItemClick)
                         Screen.Vault -> VaultScreen(onCreateAlert = onCreateAlert)
                         Screen.Trends -> TrendsScreen()
                         Screen.Settings -> SettingsScreen(onLogOut = onLogOut)
