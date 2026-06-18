@@ -50,9 +50,8 @@
     <string name="image3_description">Cake</string>
     <string name="results_placeholder">(Results will appear here)</string>
 
-    <!-- Public legal URLs. The web/ dir + .github/workflows/pages.yml publish these;
-         after enabling GitHub Pages (or any static host) set these to the live URLs
-         and use the same ones in the Play Console listing + Data Safety form. -->
-    <string name="privacy_policy_url" translatable="false">https://howdamain.github.io/freebox/privacy.html</string>
-    <string name="data_deletion_url" translatable="false">https://howdamain.github.io/freebox/delete-account.html</string>
+    <!-- Public legal URLs — live on Vercel (project: freebox-legal). Use the same
+         URLs in the Play Console listing + Data Safety form. Source files in web/. -->
+    <string name="privacy_policy_url" translatable="false">https://freebox-legal.vercel.app/privacy.html</string>
+    <string name="data_deletion_url" translatable="false">https://freebox-legal.vercel.app/delete-account.html</string>
 </resources>
