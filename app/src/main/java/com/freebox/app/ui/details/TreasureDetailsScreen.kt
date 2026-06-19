@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.freebox.app.data.Analytics
 import com.freebox.app.data.LootItem
 import com.freebox.app.data.VaultRepository
 import kotlinx.coroutines.launch
@@ -42,6 +44,7 @@ fun TreasureDetailsScreen(
     val scope = rememberCoroutineScope()
     LaunchedEffect(item.id) {
         favorited = runCatching { VaultRepository.isSaved(item.id) }.getOrDefault(false)
+        Analytics.track("listing_opened", mapOf("source" to item.sourceName))
     }
     val context = LocalContext.current
 
@@ -100,6 +103,7 @@ fun TreasureDetailsScreen(
                         tint = if (favorited) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                         onClick = {
                             favorited = !favorited
+                            if (favorited) Analytics.track("vault_added")
                             scope.launch {
                                 runCatching {
                                     if (favorited) VaultRepository.add(item.id)
@@ -362,6 +366,7 @@ fun TreasureDetailsScreen(
                 Button(
                     onClick = {
                         if (link != null) {
+                            Analytics.track("listing_link_opened", mapOf("source" to item.sourceName))
                             runCatching {
                                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)))
                             }
@@ -379,7 +384,7 @@ fun TreasureDetailsScreen(
                     )
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Launch,
+                        imageVector = Icons.AutoMirrored.Filled.Launch,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )

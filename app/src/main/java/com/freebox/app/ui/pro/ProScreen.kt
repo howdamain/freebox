@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.freebox.app.data.Analytics
 import com.freebox.app.data.AreaTeaser
 import com.freebox.app.data.TeaserRepository
 import com.freebox.app.data.TeaserSample
@@ -48,11 +49,11 @@ import com.freebox.app.ui.theme.SlateBorderFaint
 @Composable
 fun ProScreen(
     onClose: () -> Unit,
-    onStartTrial: () -> Unit = {},
+    onSubscribe: (String) -> Unit = {},
     working: Boolean = false
 ) {
     var selectedPlan by rememberSaveable { mutableStateOf("Monthly") }
-    var unlocked by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) { Analytics.track("paywall_viewed") }
     // Real local proof for this user's ZIP (count + total + locked teasers).
     val teaser by produceState<AreaTeaser?>(initialValue = null) {
         value = runCatching { TeaserRepository.myAreaTeaser() }.getOrNull()
@@ -221,95 +222,45 @@ fun ProScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // Bottom CTA — flips inline to a confirmation once "purchased".
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                Crossfade(
-                    targetState = unlocked,
-                    animationSpec = tween(durationMillis = 250),
-                    label = "proCtaState"
-                ) { isUnlocked ->
-                    if (isUnlocked) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(24.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(20.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = "You're in — Pro preview unlocked",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        fontWeight = FontWeight.Bold,
-                                        textAlign = TextAlign.Center
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Billing isn't connected in this prototype, so Pro is free for now.",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Button(
-                                onClick = onClose,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp),
-                                shape = CircleShape
-                            ) {
-                                Text(text = "Done", style = MaterialTheme.typography.labelLarge)
-                            }
-                        }
+            // Bottom CTA — launches the Play purchase flow. On a server-verified
+            // purchase the gate flips and the whole paywall is replaced, so there's
+            // no in-screen "unlocked" state to manage here.
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Button(
+                    onClick = { onSubscribe(selectedPlan) },
+                    enabled = !working,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = CircleShape
+                ) {
+                    if (working) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
                     } else {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Button(
-                                onClick = onStartTrial,
-                                enabled = !working,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp),
-                                shape = CircleShape
-                            ) {
-                                if (working) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(22.dp),
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                        strokeWidth = 2.dp
-                                    )
-                                } else {
-                                    // Trial is annual-only; monthly subscribes directly.
-                                    Text(
-                                        text = if (selectedPlan == "Yearly") "Start 3-Day Free Trial" else "Subscribe · $9.99/mo",
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = if (selectedPlan == "Yearly")
-                                    "$39.99/yr — save 67%, one flip pays for the year. 3-day free trial, cancel anytime."
-                                else
-                                    "$9.99/mo — less than one flip. Cancel anytime.",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
+                        // Trial is annual-only; monthly subscribes directly.
+                        Text(
+                            text = if (selectedPlan == "Yearly") "Start 3-Day Free Trial" else "Subscribe · $9.99/mo",
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                 }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = if (selectedPlan == "Yearly")
+                        "$39.99/yr — save 67%, one flip pays for the year. 3-day free trial, cancel anytime."
+                    else
+                        "$9.99/mo — less than one flip. Cancel anytime.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }

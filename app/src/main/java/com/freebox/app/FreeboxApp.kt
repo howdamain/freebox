@@ -8,6 +8,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import android.app.Activity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -18,6 +19,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.freebox.app.data.AlertsRepository
+import com.freebox.app.data.Analytics
 import com.freebox.app.data.FiltersStore
 import com.freebox.app.data.ListingsRepository
 import com.freebox.app.data.LocationRepository
@@ -91,12 +93,13 @@ private fun AuthedApp() {
     val entitlementViewModel: EntitlementViewModel = viewModel()
     val entState by entitlementViewModel.state.collectAsState()
     val working by entitlementViewModel.working.collectAsState()
+    val activity = LocalContext.current as? Activity
 
     when (entState) {
         EntitlementState.UNKNOWN -> SplashScreen()
         EntitlementState.NOT_ENTITLED -> ProScreen(
             onClose = { authViewModel.signOut() }, // only escape from the paywall is to leave
-            onStartTrial = { entitlementViewModel.startTrial() },
+            onSubscribe = { plan -> activity?.let { entitlementViewModel.subscribe(it, plan) } },
             working = working
         )
         EntitlementState.ENTITLED -> EntitledApp(onLogOut = { authViewModel.signOut() })
@@ -191,6 +194,7 @@ private fun FreeboxNavHost(
                         // Best-effort: schedule scraping for this ZIP, then continue
                         // regardless so a network hiccup can't trap onboarding.
                         runCatching { LocationRepository.activateZip(zip) }
+                        Analytics.track("zip_entered")
                         working = false
                         if (navController.currentDestination?.route == "zip_entry") {
                             navController.navigate("location_permission") { launchSingleTop = true }
